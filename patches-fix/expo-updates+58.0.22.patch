@@ -1,0 +1,79 @@
+diff --git a/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesConfiguration.kt b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesConfiguration.kt
+index d2173b2..5e9a7da 100644
+--- a/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesConfiguration.kt
++++ b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/UpdatesConfiguration.kt
+@@ -44,6 +44,7 @@ data class UpdatesConfiguration(
+   val enableBsdiffPatchSupport: Boolean,
+   val disableAntiBrickingMeasures: Boolean,
+   val maxUpdatesToKeep: Int = UPDATES_CONFIGURATION_MAX_UPDATES_TO_KEEP_DEFAULT_VALUE,
++  val useReactNativeHttpClient: Boolean = true,
+   val hasUpdatesOverride: Boolean,
+ 
+   private val cachedOverrideMap: Map<String, Any>?
+@@ -138,6 +139,7 @@ data class UpdatesConfiguration(
+       ?: true,
+     disableAntiBrickingMeasures = getDisableAntiBrickingMeasures(context, overrideMap),
+     maxUpdatesToKeep = getMaxUpdatesToKeep(context, overrideMap),
++    useReactNativeHttpClient = getUseReactNativeHttpClient(context, overrideMap),
+     hasUpdatesOverride = configOverride != null
+   )
+ 
+@@ -170,6 +172,7 @@ data class UpdatesConfiguration(
+     const val UPDATES_CONFIGURATION_DISABLE_ANTI_BRICKING_MEASURES = "disableAntiBrickingMeasures"
+     const val UPDATES_CONFIGURATION_ENABLE_BSDIFF_PATCH_SUPPORT = "enableBsdiffPatchSupport"
+     const val UPDATES_CONFIGURATION_MAX_UPDATES_TO_KEEP_KEY = "maxUpdatesToKeep"
++    const val UPDATES_CONFIGURATION_USE_REACT_NATIVE_HTTP_CLIENT_KEY = "useReactNativeHttpClient"
+ 
+     const val UPDATES_CONFIGURATION_CODE_SIGNING_CERTIFICATE = "codeSigningCertificate"
+     const val UPDATES_CONFIGURATION_CODE_SIGNING_METADATA = "codeSigningMetadata"
+@@ -187,6 +190,12 @@ data class UpdatesConfiguration(
+       return overrideMap?.readValueCheckingType<Boolean>(UPDATES_CONFIGURATION_DISABLE_ANTI_BRICKING_MEASURES) ?: context?.getMetadataValue("expo.modules.updates.DISABLE_ANTI_BRICKING_MEASURES") ?: false
+     }
+ 
++    private fun getUseReactNativeHttpClient(context: Context?, overrideMap: Map<String, Any>?): Boolean {
++      return overrideMap?.readValueCheckingType<Boolean>(UPDATES_CONFIGURATION_USE_REACT_NATIVE_HTTP_CLIENT_KEY)
++        ?: context?.getMetadataValue("expo.modules.updates.USE_REACT_NATIVE_HTTP_CLIENT")
++        ?: true
++    }
++
+     private fun getMaxUpdatesToKeep(context: Context?, overrideMap: Map<String, Any>?): Int {
+       return overrideMap?.readValueCheckingType<Int>(UPDATES_CONFIGURATION_MAX_UPDATES_TO_KEEP_KEY)
+         ?: context?.getMetadataValue("expo.modules.updates.EXPO_UPDATES_MAX_UPDATES_TO_KEEP")
+diff --git a/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/BaseHttpClient.kt b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/BaseHttpClient.kt
+new file mode 100644
+index 0000000..bda54f7
+--- /dev/null
++++ b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/BaseHttpClient.kt
+@@ -0,0 +1,11 @@
++package expo.modules.updates.loader
++
++import com.facebook.react.modules.network.OkHttpClientProvider
++import okhttp3.OkHttpClient
++
++internal fun createBaseClientBuilder(useReactNativeHttpClient: Boolean): OkHttpClient.Builder =
++  if (useReactNativeHttpClient) {
++    OkHttpClientProvider.getOkHttpClient().newBuilder()
++  } else {
++    OkHttpClient.Builder()
++  }
+diff --git a/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/FileDownloader.kt b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/FileDownloader.kt
+index d111bbb..80955ef 100644
+--- a/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/FileDownloader.kt
++++ b/node_modules/expo-updates/android/src/main/java/expo/modules/updates/loader/FileDownloader.kt
+@@ -1,7 +1,6 @@
+ package expo.modules.updates.loader
+ 
+ import androidx.annotation.VisibleForTesting
+-import com.facebook.react.modules.network.OkHttpClientProvider
+ import expo.modules.core.logging.localizedMessageWithCauseLocalizedMessage
+ import expo.modules.jsonutils.require
+ import expo.modules.structuredheaders.Dictionary
+@@ -77,7 +76,7 @@ class FileDownloader(
+   // If the configured launch wait milliseconds is greater than the okhttp default (10_000)
+   // we should use that as the timeout. For example, let's say launchWaitMs is 20 seconds,
+   // the HTTP timeout should be at least 20 seconds.
+-  private var client: OkHttpClient = OkHttpClientProvider.getOkHttpClient().newBuilder()
++  private var client: OkHttpClient = createBaseClientBuilder(configuration.useReactNativeHttpClient)
+     .cache(getCache())
+     .connectTimeout(max(configuration.launchWaitMs.toLong(), 10_000L), TimeUnit.MILLISECONDS)
+     .readTimeout(max(configuration.launchWaitMs.toLong(), 10_000L), TimeUnit.MILLISECONDS)

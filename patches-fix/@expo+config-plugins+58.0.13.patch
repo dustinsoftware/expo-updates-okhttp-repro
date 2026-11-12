@@ -1,0 +1,48 @@
+diff --git a/node_modules/@expo/config-plugins/build/android/Updates.js b/node_modules/@expo/config-plugins/build/android/Updates.js
+index 0425abd..42260b2 100644
+--- a/node_modules/@expo/config-plugins/build/android/Updates.js
++++ b/node_modules/@expo/config-plugins/build/android/Updates.js
+@@ -146,6 +146,11 @@ async function setUpdatesConfigAsync(projectRoot, config, androidManifest, expoU
+     } else {
+         (0, _Manifest.removeMetaDataItemFromMainApplication)(mainApplication, "expo.modules.updates.DISABLE_ANTI_BRICKING_MEASURES");
+     }
++    if ((0, _Updates.getUpdatesUseReactNativeHttpClient)(config) === false) {
++        (0, _Manifest.addMetaDataItemToMainApplication)(mainApplication, "expo.modules.updates.USE_REACT_NATIVE_HTTP_CLIENT", 'false');
++    } else {
++        (0, _Manifest.removeMetaDataItemFromMainApplication)(mainApplication, "expo.modules.updates.USE_REACT_NATIVE_HTTP_CLIENT");
++    }
+     (0, _Manifest.addMetaDataItemToMainApplication)(mainApplication, "expo.modules.updates.ENABLE_BSDIFF_PATCH_SUPPORT", (0, _Updates.getUpdatesBsdiffPatchSupportEnabled)(config) ? 'true' : 'false');
+     const maxUpdatesToKeep = (0, _Updates.getUpdatesMaxUpdatesToKeep)(config);
+     if (maxUpdatesToKeep !== undefined) {
+diff --git a/node_modules/@expo/config-plugins/build/utils/Updates.js b/node_modules/@expo/config-plugins/build/utils/Updates.js
+index c3b85ba..0acc6cf 100644
+--- a/node_modules/@expo/config-plugins/build/utils/Updates.js
++++ b/node_modules/@expo/config-plugins/build/utils/Updates.js
+@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", {
+     FINGERPRINT_RUNTIME_VERSION_SENTINEL: null,
+     getAppVersion: null,
+     getDisableAntiBrickingMeasures: null,
++    getUpdatesUseReactNativeHttpClient: null,
+     getExpoUpdatesPackageVersion: null,
+     getNativeVersion: null,
+     getRuntimeVersionAsync: null,
+@@ -42,6 +43,9 @@ _export(exports, {
+     get getDisableAntiBrickingMeasures () {
+         return getDisableAntiBrickingMeasures;
+     },
++    get getUpdatesUseReactNativeHttpClient () {
++        return getUpdatesUseReactNativeHttpClient;
++    },
+     get getExpoUpdatesPackageVersion () {
+         return getExpoUpdatesPackageVersion;
+     },
+@@ -351,6 +355,9 @@ function getUpdatesRequestHeadersStringified(config) {
+ function getDisableAntiBrickingMeasures(config) {
+     return config.updates?.disableAntiBrickingMeasures;
+ }
++function getUpdatesUseReactNativeHttpClient(config) {
++    return config.updates?.useReactNativeHttpClient;
++}
+ function getUpdatesExcludeFromBackup(config) {
+     return config.updates?.excludeFromBackup ?? false;
+ }
